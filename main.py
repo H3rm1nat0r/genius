@@ -34,8 +34,6 @@ def main():
         while True:
             final = {classification: False for classification in classifications}
             for classification in classifications:
-                if classification != 'VAT_ID':
-                    continue
                 logging.info(f"Classification: {classification}")
                 objects = get_objects(connection, classification, batchsize, history)
                 if len(objects) == 0:

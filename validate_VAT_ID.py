@@ -23,27 +23,22 @@ class validate_VAT_ID:
             List[ValidationObject]: The list of ValidationObject instances with updated status fields.
         """
         for obj in objects:
-            logging.info(f'Validating VAT_ID: {obj.value}')
+            logging.info(f"Validating VAT_ID: {obj.value}")
             obj.last_visited = datetime.now()
             vat_id = obj.value
 
             if not self.is_valid_vat_syntax(vat_id):
-                obj.status = 'CHECK'
-                obj.status_message = 'Invalid VAT ID syntax'
+                obj.status = "CHECK"
+                obj.status_message = "Invalid VAT ID syntax"
                 continue
 
             if not self.is_valid_vat_checksum(vat_id):
-                obj.status = 'CHECK'
-                obj.status_message = 'Invalid VAT ID checksum'
+                obj.status = "CHECK"
+                obj.status_message = "Invalid VAT ID checksum"
                 continue
 
-            if not self.is_valid_vat_apicall(vat_id):
-                obj.status = 'CHECK'
-                obj.status_message = 'Invalid VAT ID via API call'
-                continue
-
-            obj.status = 'OK'
-            obj.status_message = ''
+            obj.status = "OK"
+            obj.status_message = ""
 
         return objects
 
@@ -57,8 +52,7 @@ class validate_VAT_ID:
         Returns:
             bool: True if the VAT ID has a valid syntax, False otherwise.
         """
-        regex = re.compile(
-            r'^[A-Z]{2}[A-Z0-9]{2,12}$', re.IGNORECASE)
+        regex = re.compile(r"^[A-Z]{2}[A-Z0-9]{2,12}$", re.IGNORECASE)
         return re.match(regex, vat_id) is not None
 
     def is_valid_vat_checksum(self, vat_id: str) -> bool:
@@ -117,7 +111,7 @@ class validate_VAT_ID:
         Returns:
             bool: True if the checksum is valid, False otherwise.
         """
-        if len(number) != 9 or not number.startswith('U'):
+        if len(number) != 9 or not number.startswith("U"):
             return False
 
         weights = [1, 2, 1, 2, 1, 2, 1]
@@ -139,7 +133,7 @@ class validate_VAT_ID:
         Returns:
             bool: True if the checksum is valid, False otherwise.
         """
-        if len(number) != 9 or not number.startswith('CHE'):
+        if len(number) != 9 or not number.startswith("CHE"):
             return False
 
         weights = [5, 4, 3, 2, 7, 6, 5, 4]
