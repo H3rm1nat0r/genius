@@ -9,6 +9,13 @@ from validate_VAT_ID import validate_VAT_ID
 
 
 def main():
+    """
+    Main function to process classifications and validate objects.
+
+    Establishes a connection to the HANA database, retrieves classifications,
+    validates objects based on their classification, and updates the objects
+    back into the database.
+    """
     try:
         connection = get_connection()
         classifications = get_classifications(connection)
@@ -85,7 +92,6 @@ def get_classifications(connection):
     Returns:
         list: A list of tuples containing distinct classifications.
     """
-
     # Execute SQL query
     cursor = connection.cursor()
     cursor.execute(
@@ -111,7 +117,6 @@ def get_objects(connection, classification) -> List[ValidationObject]:
     Returns:
         list: A list of tuples containing objects based on the classification.
     """
-
     # Execute SQL query
     cursor = connection.cursor()
     cursor.execute(
