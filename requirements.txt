@@ -1,3 +1,8 @@
+certifi
+charset-normalizer
 hdbcli
+idna
+requests
 setuptools
+urllib3
 wheel

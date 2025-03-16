@@ -120,15 +120,15 @@ SELECT
       CLASSIFICATION
     , VALUE
     , STATUS
-    , LAST_VISIT
+    , LAST_VISITED
 FROM
 	GENIUS.SHARED_NAIGENT_DATA 
 WHERE
 	CLASSIFICATION = '{classification}'
-AND (LAST_VISIT IS NULL
-	OR LAST_VISIT < ADD_DAYS(CURRENT_DATE,-7))
+AND (LAST_VISITED IS NULL
+	OR LAST_VISITED < ADD_DAYS(CURRENT_DATE,-7))
 ORDER BY 
-	COALESCE(LAST_VISIT,'2000-01-01') DESC
+	COALESCE(LAST_VISITED,'2000-01-01') DESC
 	, VALUE ASC
 	"""
     )
@@ -140,7 +140,7 @@ ORDER BY
             classification=object[0],
             value=object[1],
             status=object[2],
-            last_visit=object[3],
+            last_visited=object[3],
         )
         for object in objects
     ]
@@ -156,11 +156,11 @@ def update_objects(connection, objects: List[ValidationObject]):
     """
     cursor = connection.cursor()
     for obj in objects:
-        if obj.last_visit is not None:
+        if obj.last_visited is not None:
             cursor.execute(
                 f"""
             UPDATE GENIUS.SHARED_NAIGENT_DATA
-            SET STATUS = '{obj.status}', LAST_VISIT = '{obj.last_visit}'
+            SET STATUS = '{obj.status}', LAST_VISITED = '{obj.last_visited}'
             WHERE CLASSIFICATION = '{obj.classification}' AND VALUE = '{obj.value}'
             """
             )
