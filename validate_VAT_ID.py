@@ -37,8 +37,7 @@ class validate_VAT_ID:
                 obj.status_message = "Invalid VAT ID checksum"
                 continue
 
-            obj.status = "OK"
-            obj.status_message = ""
+            obj.status, obj.status_message = self._validate_vat_api_call(vat_id)
 
         return objects
 
@@ -142,3 +141,16 @@ class validate_VAT_ID:
         if check_digit == 10:
             check_digit = 0
         return check_digit == int(number[8])
+
+    def _validate_vat_api_call(self, number: str) -> (str,str): # type: ignore
+        """
+        Calls an external API to validate the VAT ID.
+
+        Args:
+            number (str): The VAT ID number part (without country code).
+
+        Returns:
+            bool: True if the VAT ID is valid, False otherwise.
+        """
+        # Placeholder for API call
+        return ("OK", "")
