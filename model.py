@@ -7,4 +7,5 @@ class ValidationObject:
     classification: str
     value: str
     status: str
+    status_message: str
     last_visited: datetime

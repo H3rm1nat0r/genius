@@ -23,7 +23,7 @@ class validate_URL:
         Returns:
             List[ValidationObject]: The list of ValidationObject instances with updated status fields.
         """
-        for obj in objects[:100]:
+        for obj in objects:
             logging.info(f'Validating URL: {obj.value}')
             url = obj.value
             obj.last_visited = datetime.now()
@@ -33,18 +33,22 @@ class validate_URL:
                 url = 'http://' + url
             
             if not self.is_valid_url(url):
-                obj.status = 'CHECK: Invalid URL syntax'
+                obj.status = 'CHECK'
+                obj.status_message = 'Invalid URL syntax'
                 continue
                 
             if not self.ping_url(url):
-                obj.status = 'CHECK: Ping failed'
+                obj.status = 'CHECK'
+                obj.status_message = 'URL not reachable'
                 continue
                 
             http_status = self.check_http_status(url)
             if http_status != 200:
-                obj.status = f'CHECK: HTTP Error: {http_status}'
+                obj.status = 'CHECK'
+                obj.status_message = f'HTTP status code: {http_status}'
             else:
                 obj.status = 'OK'
+                obj.status_message = ''
         
         return objects
 

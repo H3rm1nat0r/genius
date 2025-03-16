@@ -19,28 +19,44 @@ def main():
     try:
         connection = get_connection()
         classifications = get_classifications(connection)
-
         CLASS_MAPPING = {
             "URL": validate_URL,
             "IBAN": validate_IBAN,
             "VAT_ID": validate_VAT_ID,
         }
-        for classification in classifications:
-            logging.info(f"Classification: {classification}")
-            objects = get_objects(connection, classification)
-            if classification in CLASS_MAPPING:
-                validator = CLASS_MAPPING[classification]()
-                validated_objects = validator.validate(objects)
-                update_objects(connection, validated_objects)
-            else:
-                logging.warning(
-                    f"No validator found for classification: {classification}"
-                )
+
+        config = configparser.ConfigParser()
+        config.read("config.ini")
+        batching = config["batching"]
+        batchsize = batching.getint("batchsize")
+        history = batching.getint("history")
+
+        while True:
+            final = {classification: False for classification in classifications}
+            for classification in classifications:
+                if classification != 'VAT_ID':
+                    continue
+                logging.info(f"Classification: {classification}")
+                objects = get_objects(connection, classification, batchsize, history)
+                if len(objects) == 0:
+                    final[classification] = True
+                else:
+                    if classification in CLASS_MAPPING:
+                        validator = CLASS_MAPPING[classification]()
+                        validated_objects = validator.validate(objects)
+                        update_objects(connection, validated_objects)
+                    else:
+                        logging.warning(
+                            f"No validator found for classification: {classification}"
+                        )
+            if all(final.values()):
+                break
 
     except hdbcli.dbapi.Error as e:
         logging.error(f"Error: {e}")
     except Exception as e:
         logging.error(f"Error: {e}")
+        raise Exception(e)
     else:
         logging.info("Finished processing all classifications.")
 
@@ -106,7 +122,9 @@ def get_classifications(connection):
     return [classification[0] for classification in classifications]
 
 
-def get_objects(connection, classification) -> List[ValidationObject]:
+def get_objects(
+    connection, classification, batchsize, history
+) -> List[ValidationObject]:
     """
     Retrieve objects from the GENIUS.SHARED_NAIGENT_DATA table based on the classification.
 
@@ -118,25 +136,27 @@ def get_objects(connection, classification) -> List[ValidationObject]:
         list: A list of tuples containing objects based on the classification.
     """
     # Execute SQL query
-    cursor = connection.cursor()
-    cursor.execute(
-        f"""
+    query = f"""
 SELECT
       CLASSIFICATION
     , VALUE
     , STATUS
+    , STATUS_MESSAGE
     , LAST_VISITED
 FROM
 	GENIUS.SHARED_NAIGENT_DATA 
 WHERE
 	CLASSIFICATION = '{classification}'
 AND (LAST_VISITED IS NULL
-	OR LAST_VISITED < ADD_DAYS(CURRENT_DATE,-7))
+	OR LAST_VISITED < ADD_DAYS(CURRENT_DATE,{history}))
 ORDER BY 
 	COALESCE(LAST_VISITED,'2000-01-01') DESC
 	, VALUE ASC
+LIMIT {batchsize}
 	"""
-    )
+    logging.debug(f"Query: {query}")
+    cursor = connection.cursor()
+    cursor.execute(query)
 
     # Fetch results
     objects = cursor.fetchall()
@@ -145,7 +165,8 @@ ORDER BY
             classification=object[0],
             value=object[1],
             status=object[2],
-            last_visited=object[3],
+            status_message=object[3],
+            last_visited=object[4],
         )
         for object in objects
     ]
@@ -165,7 +186,7 @@ def update_objects(connection, objects: List[ValidationObject]):
             cursor.execute(
                 f"""
             UPDATE GENIUS.SHARED_NAIGENT_DATA
-            SET STATUS = '{obj.status}', LAST_VISITED = '{obj.last_visited}'
+            SET STATUS = '{obj.status}', STATUS_MESSAGE = '{obj.status_message}', LAST_VISITED = '{obj.last_visited}'
             WHERE CLASSIFICATION = '{obj.classification}' AND VALUE = '{obj.value}'
             """
             )
