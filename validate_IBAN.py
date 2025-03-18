@@ -26,16 +26,16 @@ class validate_IBAN:
             iban = obj.value
 
             if not self.is_valid_iban_syntax(iban):
-                obj.status = "CHECK"
+                obj.status = "check"
                 obj.status_message = "Invalid IBAN syntax"
                 continue
 
             if not self.is_valid_iban_checksum(iban):
-                obj.status = "CHECK"
+                obj.status = "check"
                 obj.status_message = "Invalid IBAN checksum"
                 continue
 
-            obj.status = "OK"
+            obj.status = "ok"
             obj.status_message = ""
 
         return objects

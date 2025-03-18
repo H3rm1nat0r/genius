@@ -28,12 +28,12 @@ class validate_VAT_ID:
             vat_id = obj.value
 
             if not self.is_valid_vat_syntax(vat_id):
-                obj.status = "CHECK"
+                obj.status = "check"
                 obj.status_message = "Invalid VAT ID syntax"
                 continue
 
             if not self.is_valid_vat_checksum(vat_id):
-                obj.status = "CHECK"
+                obj.status = "check"
                 obj.status_message = "Invalid VAT ID checksum"
                 continue
 
@@ -153,4 +153,4 @@ class validate_VAT_ID:
             bool: True if the VAT ID is valid, False otherwise.
         """
         # Placeholder for API call
-        return ("OK", "")
+        return ("ok", "")

@@ -43,6 +43,7 @@ def main():
                         validator = CLASS_MAPPING[classification]()
                         validated_objects = validator.validate(objects)
                         update_objects(connection, validated_objects)
+                        logging.info(f"Updated {len(validated_objects)} objects.")
                     else:
                         logging.warning(
                             f"No validator found for classification: {classification}"

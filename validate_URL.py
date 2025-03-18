@@ -33,21 +33,21 @@ class validate_URL:
                 url = 'http://' + url
             
             if not self.is_valid_url(url):
-                obj.status = 'CHECK'
+                obj.status = 'check'
                 obj.status_message = 'Invalid URL syntax'
                 continue
                 
             if not self.ping_url(url):
-                obj.status = 'CHECK'
+                obj.status = 'check'
                 obj.status_message = 'URL not reachable'
                 continue
                 
             http_status = self.check_http_status(url)
             if http_status != 200:
-                obj.status = 'CHECK'
+                obj.status = 'check'
                 obj.status_message = f'HTTP status code: {http_status}'
             else:
-                obj.status = 'OK'
+                obj.status = 'ok'
                 obj.status_message = ''
         
         return objects
