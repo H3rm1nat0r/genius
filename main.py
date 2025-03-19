@@ -34,6 +34,8 @@ def main():
         while True:
             final = {classification: False for classification in classifications}
             for classification in classifications:
+                if final[classification]:
+                    continue
                 logging.info(f"Classification: {classification}")
                 objects = get_objects(connection, classification, batchsize, history)
                 if len(objects) == 0:
@@ -43,7 +45,7 @@ def main():
                         validator = CLASS_MAPPING[classification]()
                         validated_objects = validator.validate(objects)
                         update_objects(connection, validated_objects)
-                        logging.info(f"Updated {len(validated_objects)} objects.")
+                        logging.info(f"Updated {len(validated_objects)} objects in database.")
                     else:
                         logging.warning(
                             f"No validator found for classification: {classification}"
