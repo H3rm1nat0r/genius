@@ -11,7 +11,7 @@ class validate_VAT_ID:
     A class to validate European VAT IDs by checking their syntax and checksum.
     """
 
-    def validate(self, objects: List[ValidationObject]) -> List[ValidationObject]:
+    def validate_fast(self, objects: List[ValidationObject]) -> List[ValidationObject]:
         """
         Validates a list of ValidationObject instances by checking VAT ID syntax and checksum.
         Updates the status field of each ValidationObject.
@@ -37,10 +37,31 @@ class validate_VAT_ID:
                 obj.status_message = "Invalid VAT ID checksum"
                 continue
 
-            obj.status, obj.status_message = self._validate_vat_api_call(vat_id)
+            obj.status = "formal ok"
+            obj.status_message = "API check outstanding"
 
         return objects
 
+    def validate_slow(self, objects: List[ValidationObject]) -> List[ValidationObject]:
+        """
+        Validates a list of ValidationObject instances by checking VAT ID syntax and checksum.
+        Updates the status field of each ValidationObject.
+
+        Args:
+            objects (List[ValidationObject]): A list of ValidationObject instances to be validated.
+
+        Returns:
+            List[ValidationObject]: The list of ValidationObject instances with updated status fields.
+        """
+        for obj in objects:
+            logging.info(f"Validating VAT_ID: {obj.value}")
+            obj.last_visited = datetime.now()
+            vat_id = obj.value
+
+            obj.status, obj.status_message = self._validate_vat_api_call(vat_id)
+
+        return objects
+    
     def is_valid_vat_syntax(self, vat_id: str) -> bool:
         """
         Checks if the given VAT ID has a valid syntax.

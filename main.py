@@ -28,20 +28,21 @@ def main():
         config = configparser.ConfigParser()
         config.read("config.ini")
         batching = config["batching"]
-        batchsize = batching.getint("batchsize")
         history = batching.getint("history")
 
+        # run fast validations first (e.g. regex checks. etc.)
         while True:
+            batchsize = batching.getint("batchsize_fast")
             final = {classification: False for classification in classifications}
             for classification in classifications:
-                objects = get_objects(connection, classification, batchsize, history)
+                objects = get_objects(connection, classification, batchsize, history, "fast")
                 if len(objects) == 0:
                     final[classification] = True
                     continue
                 logging.info(f"Classification: {classification}")
                 if classification in CLASS_MAPPING:
                     validator = CLASS_MAPPING[classification]()
-                    validated_objects = validator.validate(objects)
+                    validated_objects = validator.validate_fast(objects)
                     update_objects(connection, validated_objects)
                     logging.info(f"Updated {len(validated_objects)} objects in database.")
                 else:
@@ -51,6 +52,28 @@ def main():
             if all(final.values()):
                 break
 
+        # run slow validations now (e.g. external api calls etc.)
+        while True:
+            batchsize = batching.getint("batchsize_slow")            
+            final = {classification: False for classification in classifications}
+            for classification in classifications:
+                objects = get_objects(connection, classification, batchsize, history, "slow")
+                if len(objects) == 0:
+                    final[classification] = True
+                    continue
+                logging.info(f"Classification: {classification}")
+                if classification in CLASS_MAPPING:
+                    validator = CLASS_MAPPING[classification]()
+                    validated_objects = validator.validate_slow(objects)
+                    update_objects(connection, validated_objects)
+                    logging.info(f"Updated {len(validated_objects)} objects in database.")
+                else:
+                    logging.warning(
+                        f"No validator found for classification: {classification}"
+                    )
+            if all(final.values()):
+                break
+            
     except hdbcli.dbapi.Error as e:
         logging.error(f"Error: {e}")
     except Exception as e:
@@ -122,7 +145,7 @@ def get_classifications(connection):
 
 
 def get_objects(
-    connection, classification, batchsize, history
+    connection, classification, batchsize, history, mode
 ) -> List[ValidationObject]:
     """
     Retrieve objects from the GENIUS.SHARED_NAIGENT_DATA table based on the classification.
@@ -145,11 +168,17 @@ SELECT
 FROM
 	GENIUS.SHARED_NAIGENT_DATA 
 WHERE
-	CLASSIFICATION = '{classification}'
+	CLASSIFICATION = '{classification}'"""
+    if mode == "fast":
+        query += f"""
 AND (LAST_VISITED IS NULL
-	OR LAST_VISITED < ADD_DAYS(CURRENT_DATE,{history}))
+	OR LAST_VISITED < ADD_DAYS(CURRENT_DATE,{history}))"""
+    elif mode == "slow":
+        query += f"""
+AND STATUS = 'formal ok'"""
+    query += f"""        
 ORDER BY 
-	COALESCE(LAST_VISITED,'2000-01-01') DESC
+	COALESCE(LAST_VISITED,'2000-01-01') ASC
 	, VALUE ASC
 LIMIT {batchsize}
 	"""
