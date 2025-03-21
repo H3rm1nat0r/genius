@@ -36,15 +36,20 @@ class validate_IBAN:
                 obj.status_message = "Invalid IBAN checksum"
                 continue
 
-            obj.status = "formal ok"
-            obj.status_message = "API check outstanding"
+            # no API check implemented yet
+            obj.status = "ok"
+            obj.status_message = ""
+
+            # obj.status = "formal ok"
+            # obj.status_message = "API check outstanding"
+
+
 
         return objects
 
     def validate_slow(self, objects: List[ValidationObject]) -> List[ValidationObject]:
         """
-        Validates a list of ValidationObject instances by checking IBAN syntax and checksum.
-        Updates the status field of each ValidationObject.
+        NO SLOW VALIDATION IMPLEMENTED YET
 
         Args:
             objects (List[ValidationObject]): A list of ValidationObject instances to be validated.
@@ -52,15 +57,6 @@ class validate_IBAN:
         Returns:
             List[ValidationObject]: The list of ValidationObject instances with updated status fields.
         """
-        for obj in objects:
-            logging.info(f"Validating IBAN: {obj.value}")
-            obj.last_visited = datetime.now()
-            iban = obj.value
-
-            # no API check implemented yet
-
-            obj.status = "ok"
-            obj.status_message = ""
 
         return objects
 

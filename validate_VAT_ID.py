@@ -37,15 +37,18 @@ class validate_VAT_ID:
                 obj.status_message = "Invalid VAT ID checksum"
                 continue
 
-            obj.status = "formal ok"
-            obj.status_message = "API check outstanding"
+            # no API check implemented yet
+            obj.status = "ok"
+            obj.status_message = ""
+
+            # obj.status = "formal ok"
+            # obj.status_message = "API check outstanding"
 
         return objects
 
     def validate_slow(self, objects: List[ValidationObject]) -> List[ValidationObject]:
         """
-        Validates a list of ValidationObject instances by checking VAT ID syntax and checksum.
-        Updates the status field of each ValidationObject.
+        NO SLOW VALIDATION IMPLEMENTED YET
 
         Args:
             objects (List[ValidationObject]): A list of ValidationObject instances to be validated.
@@ -53,12 +56,6 @@ class validate_VAT_ID:
         Returns:
             List[ValidationObject]: The list of ValidationObject instances with updated status fields.
         """
-        for obj in objects:
-            logging.info(f"Validating VAT_ID: {obj.value}")
-            obj.last_visited = datetime.now()
-            vat_id = obj.value
-
-            obj.status, obj.status_message = self._validate_vat_api_call(vat_id)
 
         return objects
     
@@ -162,16 +159,3 @@ class validate_VAT_ID:
         if check_digit == 10:
             check_digit = 0
         return check_digit == int(number[8])
-
-    def _validate_vat_api_call(self, number: str) -> (str,str): # type: ignore
-        """
-        Calls an external API to validate the VAT ID.
-
-        Args:
-            number (str): The VAT ID number part (without country code).
-
-        Returns:
-            bool: True if the VAT ID is valid, False otherwise.
-        """
-        # Placeholder for API call
-        return ("ok", "")
