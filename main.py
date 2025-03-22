@@ -35,7 +35,9 @@ def main():
             batchsize = batching.getint("batchsize_fast")
             final = {classification: False for classification in classifications}
             for classification in classifications:
-                objects = get_objects(connection, classification, batchsize, history, "fast")
+                objects = get_objects(
+                    connection, classification, batchsize, history, "fast"
+                )
                 if len(objects) == 0:
                     final[classification] = True
                     continue
@@ -44,7 +46,9 @@ def main():
                     validator = CLASS_MAPPING[classification]()
                     validated_objects = validator.validate_fast(objects)
                     update_objects(connection, validated_objects)
-                    logging.info(f"Updated {len(validated_objects)} objects in database.")
+                    logging.info(
+                        f"Updated {len(validated_objects)} objects in database."
+                    )
                 else:
                     logging.warning(
                         f"No validator found for classification: {classification}"
@@ -54,10 +58,12 @@ def main():
 
         # run slow validations now (e.g. external api calls etc.)
         while True:
-            batchsize = batching.getint("batchsize_slow")            
+            batchsize = batching.getint("batchsize_slow")
             final = {classification: False for classification in classifications}
             for classification in classifications:
-                objects = get_objects(connection, classification, batchsize, history, "slow")
+                objects = get_objects(
+                    connection, classification, batchsize, history, "slow"
+                )
                 if len(objects) == 0:
                     final[classification] = True
                     continue
@@ -66,14 +72,16 @@ def main():
                     validator = CLASS_MAPPING[classification]()
                     validated_objects = validator.validate_slow(objects)
                     update_objects(connection, validated_objects)
-                    logging.info(f"Updated {len(validated_objects)} objects in database.")
+                    logging.info(
+                        f"Updated {len(validated_objects)} objects in database."
+                    )
                 else:
                     logging.warning(
                         f"No validator found for classification: {classification}"
                     )
             if all(final.values()):
                 break
-            
+
     except hdbcli.dbapi.Error as e:
         logging.error(f"Error: {e}")
     except Exception as e:
@@ -159,7 +167,7 @@ def get_objects(
     """
     # Execute SQL query
     query = f"""
-SELECT
+SELECT DISTINCT
       CLASSIFICATION
     , VALUE
     , STATUS
@@ -194,7 +202,7 @@ LIMIT {batchsize}
             value=object[1],
             status=object[2],
             status_message=object[3],
-            last_visited=object[4],
+            last_visited=None,
         )
         for object in objects
     ]
@@ -209,17 +217,19 @@ def update_objects(connection, objects: List[ValidationObject]):
         objects (List[ValidationObject]): A list of validated objects to be updated.
     """
     cursor = connection.cursor()
-    for obj in objects:
-        if obj.last_visited is not None:
-            cursor.execute(
-                f"""
-            UPDATE GENIUS.SHARED_NAIGENT_DATA
-            SET STATUS = '{obj.status}', STATUS_MESSAGE = '{obj.status_message}', LAST_VISITED = '{obj.last_visited}'
-            WHERE CLASSIFICATION = '{obj.classification}' AND VALUE = '{obj.value}'
-            """
-            )
-    connection.commit()
+    query = """
+        UPDATE GENIUS.SHARED_NAIGENT_DATA
+        SET STATUS = ?, STATUS_MESSAGE = ?, LAST_VISITED = ?
+        WHERE CLASSIFICATION = ? AND VALUE = ?
+    """
 
+    params = [
+        (obj.status, obj.status_message, obj.last_visited, obj.classification, obj.value)
+        for obj in objects if obj.last_visited is not None
+    ]
+
+    cursor.executemany(query, params)
+    connection.commit()    
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
