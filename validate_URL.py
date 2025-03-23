@@ -3,6 +3,7 @@ import logging
 from typing import List
 import re
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from model import ValidationObject
 
@@ -53,7 +54,7 @@ class validate_URL:
         Returns:
             List[ValidationObject]: The list of ValidationObject instances with updated status fields.
         """
-        for obj in objects:
+        def validate_object(obj):
             logging.info(f"Validating URL: {obj.value}")
             obj.last_visited = datetime.now()
             url = obj.value
@@ -65,7 +66,7 @@ class validate_URL:
             if not self.ping_url(url):
                 obj.status = "check"
                 obj.status_message = "URL not reachable"
-                continue
+                return obj
 
             http_status = self.check_http_status(url)
             if http_status != 200:
@@ -74,6 +75,13 @@ class validate_URL:
             else:
                 obj.status = "ok"
                 obj.status_message = ""
+
+            return obj
+
+        with ThreadPoolExecutor() as executor:
+            futures = [executor.submit(validate_object, obj) for obj in objects]
+            for future in as_completed(futures):
+                future.result()
 
         return objects
 
