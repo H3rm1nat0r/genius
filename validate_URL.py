@@ -120,7 +120,7 @@ class validate_URL:
         try:
             response = requests.head(url, timeout=5)
             return response.status_code < 400
-        except requests.RequestException:
+        except Exception:
             return False
 
     def check_http_status(self, url: str) -> int:
