@@ -173,6 +173,7 @@ SELECT DISTINCT
     , STATUS
     , STATUS_MESSAGE
     , LAST_VISITED
+    , ADDITIONAL_INFORMATION
 FROM
 	GENIUS.SHARED_NAIGENT_DATA 
 WHERE
@@ -203,6 +204,7 @@ LIMIT {batchsize}
             status=object[2],
             status_message=object[3],
             last_visited=None,
+            additional_information=object[5],
         )
         for object in objects
     ]
@@ -219,17 +221,26 @@ def update_objects(connection, objects: List[ValidationObject]):
     cursor = connection.cursor()
     query = """
         UPDATE GENIUS.SHARED_NAIGENT_DATA
-        SET STATUS = ?, STATUS_MESSAGE = ?, LAST_VISITED = ?
+        SET STATUS = ?, STATUS_MESSAGE = ?, LAST_VISITED = ?, ADDITIONAL_INFORMATION = ?
         WHERE CLASSIFICATION = ? AND VALUE = ?
     """
 
     params = [
-        (obj.status, obj.status_message, obj.last_visited, obj.classification, obj.value)
-        for obj in objects if obj.last_visited is not None
+        (
+            obj.status,
+            obj.status_message,
+            obj.last_visited,
+            obj.additional_information,
+            obj.classification,
+            obj.value,
+        )
+        for obj in objects
+        if obj.last_visited is not None
     ]
 
     cursor.executemany(query, params)
-    connection.commit()    
+    connection.commit()
+
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

@@ -9,3 +9,4 @@ class ValidationObject:
     status: str
     status_message: str
     last_visited: datetime
+    additional_information: str 

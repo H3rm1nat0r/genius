@@ -1,7 +1,10 @@
+import configparser
 from datetime import datetime
+import json
 import logging
 from typing import List
 import re
+from viesapi import VIESAPIClient
 
 from model import ValidationObject
 
@@ -37,14 +40,12 @@ class validate_VAT_ID:
                 obj.status_message = "Invalid VAT ID checksum"
                 continue
 
-            # no API check implemented yet
-            obj.status = "ok"
-            obj.status_message = ""
-
-            # obj.status = "formal ok"
-            # obj.status_message = "API check outstanding"
+            # If the VAT ID is valid, set status to "formal ok"
+            obj.status = "formal ok"
+            obj.status_message = "API check outstanding"
 
         return objects
+
 
     def validate_slow(self, objects: List[ValidationObject]) -> List[ValidationObject]:
         """
@@ -57,8 +58,42 @@ class validate_VAT_ID:
             List[ValidationObject]: The list of ValidationObject instances with updated status fields.
         """
 
+        config = configparser.ConfigParser()
+        config.read("config.ini")
+        viesapicredentials = config["viesapi"]
+        viesapi = VIESAPIClient(
+            viesapicredentials["Identifier"], viesapicredentials["Key"]
+        )
+        account = viesapi.get_account_status()
+        if account:
+            logging.info(f"Account status:")
+            varsaccount = vars(account)
+            logging.info(json.dumps(varsaccount, indent=4,default=str))
+            if varsaccount["total_count"] >= varsaccount["limit"]:
+                logging.info("Account status: limit reached")
+                return objects
+        else:
+            logging.info("No account status available.")
+            logging.info(viesapi.get_last_error())
+                
+        for obj in objects:
+            logging.info(f"Validating VAT_ID: {obj.value}")
+            result = viesapi.get_vies_data(obj.value)
+            resultvars = vars(result)
+            logging.info(json.dumps(resultvars, indent=4, default=str))
+            if resultvars["valid"] is False:
+                obj.additional_information = ""
+                obj.status = "check"
+                obj.status_message = "Invalid VAT ID (API check)"
+            else:
+                trader_info = {key: value for key, value in resultvars.items() if key.startswith("trader") or key in ["country_code","source","vat_number"]}
+                obj.additional_information = json.dumps(trader_info, indent=4, default=str)
+                obj.status = "ok"
+                obj.status_message = ""
+            obj.last_visited = datetime.now()
+
         return objects
-    
+
     def is_valid_vat_syntax(self, vat_id: str) -> bool:
         """
         Checks if the given VAT ID has a valid syntax.
