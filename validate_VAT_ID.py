@@ -79,17 +79,24 @@ class validate_VAT_ID:
         for obj in objects:
             logging.info(f"Validating VAT_ID: {obj.value}")
             result = viesapi.get_vies_data(obj.value)
-            resultvars = vars(result)
-            logging.info(json.dumps(resultvars, indent=4, default=str))
-            if resultvars["valid"] is False:
+            if result:
+                resultvars = vars(result)
+                logging.info(json.dumps(resultvars, indent=4, default=str))
+                if resultvars["valid"] is False:
+                    obj.additional_information = ""
+                    obj.status = "check"
+                    obj.status_message = "Invalid VAT ID (API check)"
+                else:
+                    trader_info = {key: value for key, value in resultvars.items() if key.startswith("trader") or key in ["country_code","source","vat_number"]}
+                    obj.additional_information = json.dumps(trader_info, indent=4, default=str)
+                    obj.status = "ok"
+                    obj.status_message = ""
+            else:
                 obj.additional_information = ""
                 obj.status = "check"
-                obj.status_message = "Invalid VAT ID (API check)"
-            else:
-                trader_info = {key: value for key, value in resultvars.items() if key.startswith("trader") or key in ["country_code","source","vat_number"]}
-                obj.additional_information = json.dumps(trader_info, indent=4, default=str)
-                obj.status = "ok"
-                obj.status_message = ""
+                obj.status_message = "Invalid VAT ID (API check did not return anything)"
+                logging.info(viesapi.get_last_error())
+             
             obj.last_visited = datetime.now()
 
         return objects
