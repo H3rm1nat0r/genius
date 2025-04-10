@@ -1,5 +1,6 @@
 import configparser
 import logging
+import traceback
 from typing import List
 import hdbcli.dbapi
 from model import ValidationObject
@@ -83,9 +84,11 @@ def main():
                 break
 
     except hdbcli.dbapi.Error as e:
-        logging.error(f"Error: {e}")
+        logging.error(f"hdbcli.dbapi.Error: {e}")
+        traceback.print_exc()  # Print the stack trace for hdbcli.dbapi.Error
     except Exception as e:
-        logging.error(f"Error: {e}")
+        logging.error(f"Exception: {e}")
+        traceback.print_exc()  # Print the stack trace for general exceptions
         raise Exception(e)
     else:
         logging.info("Finished processing all classifications.")
