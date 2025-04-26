@@ -72,6 +72,8 @@ def main():
                 if classification in CLASS_MAPPING:
                     validator = CLASS_MAPPING[classification]()
                     validated_objects = validator.validate_slow(objects)
+                    if validated_objects is None or len(validated_objects) == 0:
+                        continue
                     update_objects(connection, validated_objects)
                     logging.info(
                         f"Updated {len(validated_objects)} objects in database."

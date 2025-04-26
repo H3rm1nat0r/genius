@@ -76,10 +76,11 @@ class validate_VAT_ID:
             logging.info(json.dumps(varsaccount, indent=4, default=str))
             if varsaccount["total_count"] >= varsaccount["limit"]:
                 logging.info("Account status: limit reached")
-                return objects
+                return None
         else:
             logging.info("No account status available.")
             logging.info(viesapi.get_last_error())
+            return None
 
         # setup the list of VATIDs to be checked
         vat_ids = [obj.value for obj in objects]
@@ -100,7 +101,7 @@ class validate_VAT_ID:
                 logging.error(
                     f"Error: {viesapi.get_last_error()} (code: {viesapi.get_last_error_code()})"
                 )
-                return objects
+                return None
 
             # Batch is still processing, wait for 30 seconds
             logging.info("Batch is still processing, waiting...")
@@ -112,12 +113,11 @@ class validate_VAT_ID:
         numbers = resultvars["numbers"]
         if not numbers:
             logging.info("No numbers found in the batch result.")
-            return objects
-        if resultvars["errors"]:
-            logging.error(f"Batch result error: {resultvars['errors']}")
-            return objects
+            return None
+        logging.info(f"Batch result: {len(numbers)} numbers found.")
 
         # Update the objects with the batch result
+        validated = []
         for number in numbers:
             viesdata = vars(number)
             country_code = viesdata["country_code"]
@@ -125,6 +125,7 @@ class validate_VAT_ID:
 
             for obj in objects:
                 if obj.value == f"{country_code}{vat_id}":
+                    validated.append(obj.value)
                     obj.last_visited = datetime.now()
                     if viesdata["valid"] is False:
                         obj.additional_information = ""
@@ -143,8 +144,11 @@ class validate_VAT_ID:
                         obj.status = "ok"
                         obj.status_message = ""
                     break
-
-        return objects
+        
+        # remove objects that have not been validated   
+        validate_objects = [obj for obj in objects if obj.value in validated]
+        
+        return validate_objects
 
     def is_valid_vat_syntax(self, vat_id: str) -> bool:
         """
