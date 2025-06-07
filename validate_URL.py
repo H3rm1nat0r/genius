@@ -59,22 +59,7 @@ class validate_URL:
             obj.last_visited = datetime.now()
             url = obj.value
 
-            # Add scheme if missing
-            if not re.match(r"^(?:http|ftp)s?://", url):
-                url = "http://" + url
-
-            if not self.ping_url(url):
-                obj.status = "check"
-                obj.status_message = "URL not reachable"
-                return obj
-
-            http_status = self.check_http_status(url)
-            if http_status != 200:
-                obj.status = "check"
-                obj.status_message = f"HTTP status code: {http_status}"
-            else:
-                obj.status = "ok"
-                obj.status_message = ""
+            obj.status, obj.status_message = self.ping_url(url)
 
             return obj
 
@@ -107,22 +92,48 @@ class validate_URL:
         )
         return re.match(regex, url) is not None
 
-    def ping_url(self, url: str) -> bool:
+    def ping_url(self, url: str) -> (str, str):
         """
-        Pings the given URL to check if it is reachable.
+        Checks if the given URL is reachable like a browser would:
+        - Ensures HTTPS is used
+        - Adds a browser-like User-Agent
+        - Follows redirects
+        - Falls back to GET if HEAD fails
 
         Args:
-            url (str): The URL to be pinged.
+            url (str): The URL to be checked.
 
         Returns:
-            bool: True if the URL is reachable, False otherwise.
+            tuple: ("ok", "") if reachable, ("check", <reason>) otherwise.
         """
-        try:
-            response = requests.head(url, timeout=5)
-            return response.status_code < 400
-        except Exception:
-            return False
+        # Ensure HTTPS is used
+        if not url.startswith("http://") and not url.startswith("https://"):
+            url = "https://" + url
+        elif url.startswith("http://"):
+            url = "https://" + url[len("http://"):]
 
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/114.0.0.0 Safari/537.36"
+            )
+        }
+
+        try:
+            logging.info(f"Checking URL: {url}")
+            response = requests.head(url, allow_redirects=True, timeout=5, headers=headers)
+            if response.status_code < 400:
+                return "ok", ""
+            # Fallback to GET
+            response = requests.get(url, allow_redirects=True, timeout=5, headers=headers)
+            if response.status_code < 400:
+                return "ok", ""
+            else:
+                return "check", f"HTTP error: {response.status_code}"
+        except Exception as e:
+            return "check", f"Exception: {str(e)}"
+        
     def check_http_status(self, url: str) -> int:
         """
         Checks the HTTP status code of the given URL.
